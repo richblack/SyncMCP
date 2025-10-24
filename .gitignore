@@ -1,0 +1,65 @@
+# MCP 源碼 (本地，不同步)
+mcp-sources/
+reports/
+.claude/
+.claude-flow/
+.swarm/
+
+# Python
+*.pyc
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 系統文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 編輯器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 臨時文件
+*.tmp
+*.bak
+*.log
+
+# 備份 (已有專門的備份目錄)
+backup/
+*.backup
+
+# 測試
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 環境變數 (可能包含敏感資訊)
+.env
+.env.local
+.env.*.local
+
+# 打包文件
+dist/
+build/
+*.egg
