@@ -20,7 +20,7 @@ console = Console()
 
 
 @click.group()
-@click.version_option(version="2.0.0-dev", prog_name="syncmcp")
+@click.version_option(version="2.0.0", prog_name="syncmcp")
 @click.option("--verbose", "-v", is_flag=True, help="顯示詳細日誌")
 @click.pass_context
 def cli(ctx, verbose):
@@ -292,6 +292,17 @@ def interactive():
     from syncmcp.tui import main as tui_main
 
     tui_main()
+
+
+@cli.command()
+def mcp():
+    """啟動 MCP Server（供 Claude Code 等客戶端使用）"""
+    import asyncio
+
+    from syncmcp.mcp.server import main as mcp_main
+
+    # 執行 MCP Server
+    asyncio.run(mcp_main())
 
 
 @cli.command()

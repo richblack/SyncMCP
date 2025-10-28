@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "syncmcp"
-version = "2.0.0-dev"
+version = "2.0.0"
 description = "智能 MCP 配置同步工具 - Smart MCP Configuration Sync Tool"
 authors = [{name = "SyncMCP Contributors"}]
 license = {text = "MIT"}

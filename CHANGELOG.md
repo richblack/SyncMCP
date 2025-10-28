@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Background Monitor**: 背景監控 daemon 模式
 - **AI Assistant**: AI 協助診斷複雜問題
 
-## [2.0.0-dev] - 2025-10-28
+## [2.0.0] - 2025-10-28
 
 ### 🎉 Major Rewrite
 
@@ -46,10 +46,13 @@ Complete rewrite of SyncMCP from a single script to a modular Python package.
 - 鍵盤導航支援
 
 #### MCP Server Integration
+- `syncmcp mcp`: 啟動 MCP Server 的 CLI 指令
 - `sync_mcp_configs`: 同步配置工具
 - `check_sync_status`: 檢查狀態工具
 - `show_config_diff`: 顯示差異工具
 - `suggest_conflict_resolution`: 衝突解決建議
+- `get_setup_guide`: MCP 設置指南查詢
+- `troubleshoot_mcp`: MCP 問題診斷與修復建議
 
 #### Development Tools
 - **GitHub Actions CI/CD**: 多環境自動化測試
@@ -103,6 +106,7 @@ syncmcp/
 - 修正 MCP type 不匹配問題
 - 修正專案級別 MCP 配置未同步的問題
 - 修正 Claude Desktop 僅支援 stdio 的過濾
+- **修正 MCP Server 無法連接的問題**：添加缺失的 `syncmcp mcp` CLI 指令（關鍵修復）
 
 ### 🔐 Security
 - 實作 Bandit 安全掃描
@@ -195,8 +199,6 @@ v1.0 和 v2.0 使用相同的配置文件格式，無需遷移。
 
 ---
 
-**Note**: 版本 2.0.0 尚未正式發布到 PyPI。目前版本為 `2.0.0-dev`（開發版本）。
-
 [Unreleased]: https://github.com/yourusername/SyncMCP/compare/v2.0.0...HEAD
-[2.0.0-dev]: https://github.com/yourusername/SyncMCP/compare/v1.0.0...v2.0.0
+[2.0.0]: https://github.com/yourusername/SyncMCP/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/yourusername/SyncMCP/releases/tag/v1.0.0
