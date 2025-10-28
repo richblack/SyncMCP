@@ -147,32 +147,131 @@ class SmartMCPConfigSync:
 
         return merged
 
-    def normalize_server_config(self, server_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        """標準化伺服器配置格式"""
+    def infer_type(self, config: Dict[str, Any]) -> str:
+        """推斷配置的類型
+
+        Args:
+            config: MCP 配置
+
+        Returns:
+            推斷的類型字串
+        """
+        if config.get('type'):
+            return config['type']
+
+        # 根據欄位推斷
+        if 'url' in config:
+            # 有 URL 表示遠端服務，預設用 streamable-http（最通用）
+            return 'streamable-http'
+        elif 'command' in config:
+            return 'stdio'
+        else:
+            # 預設為 stdio
+            return 'stdio'
+
+    def normalize_server_config(
+        self,
+        config: Dict[str, Any],
+        target_client: str
+    ) -> Optional[Dict[str, Any]]:
+        """通用的配置標準化函數，支援所有客戶端之間的雙向轉換
+
+        Args:
+            config: 原始配置
+            target_client: 目標客戶端
+                - 'claude-code'
+                - 'roo-code'
+                - 'claude-desktop'
+                - 'gemini'
+
+        Returns:
+            轉換後的配置，或 None 表示應過濾掉
+        """
         normalized = config.copy()
 
-        # 確保有 type 欄位
-        if 'type' not in normalized:
-            if 'url' in normalized:
-                normalized['type'] = 'streamable-http'
-            elif 'command' in normalized:
-                normalized['type'] = 'stdio'
+        # 1. 推斷類型
+        current_type = self.infer_type(normalized)
+
+        # 2. stdio 類型特殊處理（所有客戶端都支援）
+        if current_type == 'stdio':
+            if target_client == 'claude-desktop':
+                # Desktop 不需要 type 欄位
+                normalized.pop('type', None)
             else:
                 normalized['type'] = 'stdio'
-        # 修正 http -> streamable-http
-        elif normalized.get('type') == 'http':
-            normalized['type'] = 'streamable-http'
 
-        # 移除 Roo Code 特有欄位
-        normalized.pop('autoApprove', None)
-        normalized.pop('alwaysAllow', None)
-        normalized.pop('disabled', None)
+            # 清理 Roo 特有欄位（如果目標不是 Roo）
+            if target_client != 'roo-code':
+                normalized.pop('autoApprove', None)
+                normalized.pop('alwaysAllow', None)
+                normalized.pop('disabled', None)
+
+            return normalized
+
+        # 3. 遠端類型轉換
+        if target_client == 'claude-code':
+            # Claude Code: streamable-http → http/sse
+            if current_type == 'streamable-http':
+                # 根據是否有 headers 決定
+                if normalized.get('headers'):
+                    normalized['type'] = 'http'
+                else:
+                    normalized['type'] = 'sse'
+            elif current_type in ['http', 'sse']:
+                # 保留原有類型
+                normalized['type'] = current_type
+            else:
+                # 未知類型，預設為 sse
+                normalized['type'] = 'sse'
+
+            # 移除 Roo 特有欄位
+            normalized.pop('autoApprove', None)
+            normalized.pop('alwaysAllow', None)
+            normalized.pop('disabled', None)
+
+        elif target_client == 'roo-code':
+            # Roo Code: http/sse → streamable-http
+            if current_type in ['http', 'sse']:
+                normalized['type'] = 'streamable-http'
+            elif current_type == 'streamable-http':
+                # 保留
+                normalized['type'] = 'streamable-http'
+            else:
+                # 未知遠端類型，使用 streamable-http
+                normalized['type'] = 'streamable-http'
+
+        elif target_client == 'claude-desktop':
+            # Claude Desktop: 只支援 stdio，遠端類型全部過濾
+            return None
+
+        elif target_client == 'gemini':
+            # Gemini: http/sse → streamable-http
+            if current_type in ['http', 'sse']:
+                normalized['type'] = 'streamable-http'
+            elif current_type == 'streamable-http':
+                # 保留
+                normalized['type'] = 'streamable-http'
+            else:
+                # 未知遠端類型
+                normalized['type'] = 'streamable-http'
+
+            # 移除 Roo 特有欄位
+            normalized.pop('autoApprove', None)
+            normalized.pop('alwaysAllow', None)
+            normalized.pop('disabled', None)
 
         return normalized
 
     def write_claude_code_config(self, mcp_servers: Dict[str, Any]):
         """寫入 Claude Code 配置"""
         config_path = self.configs['claude-code']
+
+        # 轉換為 Claude Code 格式
+        claude_servers = {}
+        for name, config in mcp_servers.items():
+            normalized = self.normalize_server_config(config, 'claude-code')
+            if normalized:  # 不過濾（只有 Desktop 才過濾）
+                claude_servers[name] = normalized
 
         # 讀取現有配置
         if config_path.exists():
@@ -182,48 +281,54 @@ class SmartMCPConfigSync:
             full_config = {}
 
         # 更新 mcpServers
-        full_config['mcpServers'] = mcp_servers
+        full_config['mcpServers'] = claude_servers
 
         # 寫回
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(full_config, f, indent=2, ensure_ascii=False)
 
-        print(f"✅ 已更新 Claude Code: {config_path}")
+        print(f"✅ 已更新 Claude Code: {config_path} ({len(claude_servers)} 個 MCP)")
 
     def write_roo_code_config(self, mcp_servers: Dict[str, Any]):
         """寫入 Roo Code 配置"""
         config_path = self.configs['roo-code']
+
+        # 轉換為 Roo Code 格式
+        roo_servers = {}
+        for name, config in mcp_servers.items():
+            normalized = self.normalize_server_config(config, 'roo-code')
+            if normalized:
+                roo_servers[name] = normalized
 
         # 確保目錄存在
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Roo Code 格式
         roo_config = {
-            'mcpServers': mcp_servers
+            'mcpServers': roo_servers
         }
 
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(roo_config, f, indent=2, ensure_ascii=False)
 
-        print(f"✅ 已更新 Roo Code: {config_path}")
+        print(f"✅ 已更新 Roo Code: {config_path} ({len(roo_servers)} 個 MCP)")
 
     def write_claude_desktop_config(self, mcp_servers: Dict[str, Any]):
         """寫入 Claude Desktop 配置"""
         config_path = self.configs['claude-desktop']
 
-        # Claude Desktop 格式 (不需要 type 欄位,且不支持 HTTP MCP)
+        # 轉換為 Claude Desktop 格式（只支援 stdio）
         desktop_servers = {}
         skipped_http = []
 
         for name, config in mcp_servers.items():
-            # 跳過 HTTP/streamable-http 類型的 MCP
-            if config.get('type') in ['http', 'streamable-http', 'sse']:
+            normalized = self.normalize_server_config(config, 'claude-desktop')
+            if normalized:
+                # 通過過濾（stdio）
+                desktop_servers[name] = normalized
+            else:
+                # 被過濾（遠端 MCP）
                 skipped_http.append(name)
-                continue
-
-            server_config = config.copy()
-            server_config.pop('type', None)
-            desktop_servers[name] = server_config
 
         desktop_config = {
             'mcpServers': desktop_servers
@@ -232,13 +337,20 @@ class SmartMCPConfigSync:
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(desktop_config, f, indent=2, ensure_ascii=False)
 
-        print(f"✅ 已更新 Claude Desktop: {config_path}")
+        print(f"✅ 已更新 Claude Desktop: {config_path} ({len(desktop_servers)} 個 MCP)")
         if skipped_http:
-            print(f"   ⚠️  跳過 HTTP MCP (Claude Desktop 不支持): {', '.join(skipped_http)}")
+            print(f"   ⚠️  已過濾遠端 MCP (Desktop 僅支援 stdio): {', '.join(skipped_http)}")
 
     def write_gemini_cli_config(self, mcp_servers: Dict[str, Any]):
         """寫入 Gemini CLI 配置"""
         config_path = self.configs['gemini-cli']
+
+        # 轉換為 Gemini 格式
+        gemini_servers = {}
+        for name, config in mcp_servers.items():
+            normalized = self.normalize_server_config(config, 'gemini')
+            if normalized:
+                gemini_servers[name] = normalized
 
         # 確保目錄存在
         config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -251,12 +363,12 @@ class SmartMCPConfigSync:
             full_config = {}
 
         # 更新 mcpServers
-        full_config['mcpServers'] = mcp_servers
+        full_config['mcpServers'] = gemini_servers
 
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(full_config, f, indent=2, ensure_ascii=False)
 
-        print(f"✅ 已更新 Gemini CLI: {config_path}")
+        print(f"✅ 已更新 Gemini CLI: {config_path} ({len(gemini_servers)} 個 MCP)")
 
     def sync(self):
         """執行智能同步"""
@@ -296,12 +408,8 @@ class SmartMCPConfigSync:
         print(f"\n🧠 智能合併 (選擇最新修改的版本)...")
         merged_servers = self.smart_merge_servers(all_servers)
 
-        # 6. 標準化所有伺服器配置
-        for server_name in merged_servers:
-            merged_servers[server_name] = self.normalize_server_config(
-                server_name,
-                merged_servers[server_name]
-            )
+        # 6. 不需要在這裡標準化，因為各個 write 函數會根據目標客戶端自動轉換
+        # 這樣可以確保每個客戶端都得到正確的格式
 
         print(f"\n📊 合併後共有 {len(merged_servers)} 個 MCP 伺服器:")
         for i, name in enumerate(sorted(merged_servers.keys()), 1):

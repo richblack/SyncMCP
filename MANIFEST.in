@@ -1,0 +1,23 @@
+# Include documentation
+include README.md
+include LICENSE
+include CHANGELOG.md
+
+# Include RFP and documentation
+recursive-include rfp *.md
+recursive-include docs *.md
+
+# Include tests (for source distributions)
+recursive-include tests *.py
+
+# Include configuration files
+include pyproject.toml
+include .pre-commit-config.yaml
+include Makefile
+
+# Exclude unnecessary files
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store
+global-exclude *.swp
+global-exclude *.swo

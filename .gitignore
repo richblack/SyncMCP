@@ -63,3 +63,24 @@ htmlcov/
 dist/
 build/
 *.egg
+
+# CI/CD 產物
+.pre-commit-cache/
+.ruff_cache/
+.mypy_cache/
+
+# 內部開發文件 (不對外公開)
+rfp/COMPLETED-*.md
+rfp/BUG-*.md
+rfp/FIXED-*.md
+rfp/TASK-STATUS-*.md
+rfp/bug-*.md
+rfp/fix-*.md
+user-requirements/drafts/
+memory/
+memory-export-*.json
+
+# 臨時測試文件
+MESSAGE-TO-CLAUDE.txt
+test_*.py
+!tests/test_*.py
