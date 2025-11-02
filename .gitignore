@@ -70,13 +70,6 @@ build/
 .mypy_cache/
 
 # 內部開發文件 (不對外公開)
-rfp/COMPLETED-*.md
-rfp/BUG-*.md
-rfp/FIXED-*.md
-rfp/TASK-STATUS-*.md
-rfp/bug-*.md
-rfp/fix-*.md
-user-requirements/drafts/
 memory/
 memory-export-*.json
 
@@ -84,3 +77,8 @@ memory-export-*.json
 MESSAGE-TO-CLAUDE.txt
 test_*.py
 !tests/test_*.py
+
+# AI 互動文件
+user-requirements/
+CLAUDE.md
+rfp/AI-reports
