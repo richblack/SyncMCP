@@ -21,13 +21,15 @@ class TestMCPServerTools:
         tools = await list_tools()
 
         assert isinstance(tools, list)
-        assert len(tools) == 4
+        assert len(tools) == 6  # 更新為 6 個工具
 
         tool_names = [t.name for t in tools]
         assert "sync_mcp_configs" in tool_names
         assert "check_sync_status" in tool_names
         assert "show_config_diff" in tool_names
         assert "suggest_conflict_resolution" in tool_names
+        assert "get_setup_guide" in tool_names
+        assert "troubleshoot_mcp" in tool_names
 
     @pytest.mark.asyncio
     async def test_tool_schemas(self):
